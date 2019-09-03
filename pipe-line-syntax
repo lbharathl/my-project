@@ -1,0 +1,25 @@
+node{
+    stage('Scm Checkout'){
+        git 'https://github.com/lbharathl/my-project.git'
+    }
+    stage('Mvn Clean Package'){
+        sh label: '', script: 'mvn clean package'
+    }
+    stage('Build Docker Image'){
+        sh label: '', script: 'docker build -t lbharathl/myapp:2.0 .'
+    }
+    # Use Plugin (with Credentials Bind to Variable) via Pipelinesyntax -use Secrect Text
+    stage('Push Image to Docker hub'){
+        withCredentials([string(credentialsId: 'Docker-pwd1', variable: 'DockerhubPwd')]) {
+        sh label: '', script: "docker login -u lbharathl -p ${DockerhubPwd}"
+    }
+        sh label: '', script: 'docker push lbharathl/myapp:2.0'
+    }
+    #Install plugin -SShAgent and provide .pem file in enter directly
+    stage('RunContainer on Dev Server'){
+        def dockerRun = 'docker run -p 8080:8080 -d --name my-app lbharathl/myapp:2.0'
+        sshagent(['Dev-Server']) {
+        sh "ssh -o StrictHostKeyChecking=no ec2-user@172.31.87.14 ${dockerRun}"
+    }
+    }
+}    
